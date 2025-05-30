@@ -1,7 +1,7 @@
 ﻿// routes/adminRoutes.js
 const router = require('express').Router();
 const { verifyJWT } = require('../middleware/auth');
-const { createQuiz, getAllQuizzes, updateQuiz, deleteQuiz, getAllResults, createBroker, deleteBroker, getAllBrokers } = require('../controllers/adminController');
+const { createQuiz, getAllQuizzes, updateQuiz, deleteQuiz, getAllResults, createBroker, deleteBroker, getAllBrokers, deleteUserByUserId } = require('../controllers/adminController');
 router.use(verifyJWT);
 router.post('/quizzes', createQuiz);
 router.get('/quizzes', getAllQuizzes);
@@ -11,4 +11,5 @@ router.get('/results', getAllResults);
 router.post('/brokers', createBroker);
 router.get('/brokers', getAllBrokers);
 router.delete('/brokers/:username', deleteBroker);
+router.delete('/user/:userId', deleteUserByUserId)
 module.exports = router;

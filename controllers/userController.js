@@ -77,11 +77,15 @@ exports.getAllUsersActiveQuizzesByUserId = async (req, res, next) => {
     const { userId } = req.params;
     if (!userId) return res.status(400).json({ message: 'userId is required' });
 
-    const now = new Date();
+    // Get current IST time
+    const nowUTC = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const nowIST = new Date(nowUTC.getTime() + istOffset);
+
     const activeQuizzes = await Quiz.find({
       assignedUsers: { $in: [userId] },
-      startTime: { $lte: now.toISOString() },
-      endTime: { $gte: now.toISOString() }
+      startTime: { $lte: nowIST },
+      endTime: { $gte: nowIST }
     }).select('title startTime endTime');
 
     res.json({ activeQuizzes });

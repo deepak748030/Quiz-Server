@@ -2,6 +2,7 @@
 const Quiz = require('../models/Quiz');
 const Result = require('../models/Result');
 const Broker = require('../models/Broker');
+const User = require('../models/User');
 
 exports.createQuiz = async (req, res, next) => {
     try {
@@ -20,6 +21,29 @@ exports.getAllBrokers = async (req, res, next) => {
     try {
         const brokers = await Broker.find({}, '-password');
         res.json(brokers);
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.deleteUserByUserId = async function (req, res, next) {
+    try {
+        const userId = req.params.userId;
+
+        // Delete user
+        const user = await User.findByIdAndDelete(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Remove user from assignedUsers in all quizzes
+        await Quiz.updateMany(
+            { assignedUsers: userId },
+            { $pull: { assignedUsers: userId } }
+        );
+
+        // Remove user's results
+        await Result.deleteMany({ user: userId });
+
+        res.json({ message: 'User and related data deleted' });
     } catch (err) {
         next(err);
     }
