@@ -18,12 +18,10 @@ const quizSchema = new mongoose.Schema({
   questions: { type: [questionSchema] },
   assignedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   startTime: {
-    type: Date,
-    set: toIST
+    type: String
   },
   endTime: {
-    type: Date,
-    set: toIST
+    type: String
   }
 }, { timestamps: true });
 

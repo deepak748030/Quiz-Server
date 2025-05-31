@@ -4,29 +4,11 @@ const Result = require('../models/Result');
 const Broker = require('../models/Broker');
 const User = require('../models/User');
 
-function convertToIST(date) {
-    if (!date) return date;
-    return new Date(new Date(date).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-}
-
 exports.createQuiz = async (req, res, next) => {
     try {
         const { title, questions, assignedUsers, startTime, endTime } = req.body;
-        if (!title || !questions || !assignedUsers)
-            return res.status(400).json({ message: 'Invalid data' });
-
-        const quiz = await Quiz.create({
-            title,
-            questions,
-            assignedUsers,
-            startTime: convertToIST(startTime),
-            endTime: convertToIST(endTime)
-        });
-
-        res.status(201).json({ quizId: quiz._id });
-    } catch (err) {
-        next(err);
-    }
+        if (!title || !questions || !assignedUsers) return res.status(400).json({ message: 'Invalid data' }); const quiz = await Quiz.create({ title, questions, assignedUsers, startTime, endTime }); res.status(201).json({ quizId: quiz._id });
+    } catch (err) { next(err); }
 };
 
 exports.getAllQuizzes = async (req, res, next) => { try { res.json(await Quiz.find()); } catch (err) { next(err); } };
