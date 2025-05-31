@@ -77,17 +77,18 @@ exports.getAllUsersActiveQuizzesByUserId = async (req, res, next) => {
     const { userId } = req.params;
     if (!userId) return res.status(400).json({ message: 'userId is required' });
 
-    // Get current IST time
-    const nowUTC = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const nowIST = new Date(nowUTC.getTime() + istOffset);
-
+    // Get current time in Asia/Kolkata timezone in 'YYYY-MM-DDTHH:mm' format
+    const nowIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const dateObj = new Date(nowIST);
+    const pad = n => n.toString().padStart(2, '0');
+    const nowISTString = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
+    console.log(nowISTString)
     const activeQuizzes = await Quiz.find({
       assignedUsers: { $in: [userId] },
-      startTime: { $lte: nowIST },
-      endTime: { $gte: nowIST }
+      startTime: { $lte: nowISTString },
+      endTime: { $gte: nowISTString }
     }).select('title startTime endTime');
-
+    console.log(activeQuizzes)
     res.json({ activeQuizzes });
   } catch (err) {
     next(err);
