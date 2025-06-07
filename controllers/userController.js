@@ -3,64 +3,62 @@ const User = require('../models/User');
 const Quiz = require('../models/Quiz');
 const Result = require('../models/Result');
 
-exports.loginAndFetch = async (req, res, next) => {
+// REGISTER
+exports.registerUser = async (req, res) => {
   try {
-    const { rollNumber, username, school } = req.body;
-    if (!username || !school) {
-      let user = await User.findOne({ rollNumber });
-      if (!user) {
-        return res.status(400).json({ message: 'user not available with this roll no ' })
-      }
-      res.status(200).json({ message: 'user logged in successfully', data: user });
+    const { name, guardianOrParent, mobileNo, aadhaarNo, panCardNo, dob, education, address } = req.body;
 
-    } else {
-      if (!rollNumber || !username || !school) return res.status(400).json({ message: 'rollNumber, username & school required' });
-      let user = await User.findOne({ rollNumber });
-      if (user) {
-        return res.status(400).json({ message: 'user already exists with this roll no ' })
-      }
-      const data = await User.create({ rollNumber, username, school });
-      res.status(201).json({ message: 'user created successfully', data: data });
+    const existingUser = await User.findOne({ mobileNo });
+    if (existingUser) return res.status(400).json({ message: 'User already exists' });
 
-    }
-  } catch (err) { next(err); }
+    const newUser = new User({
+      name,
+      guardianOrParent,
+      mobileNo,
+      aadhaarNo,
+      panCardNo,
+      dob,
+      education,
+      address,
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ message: 'User registered', user: newUser });
+  } catch (err) {
+    res.status(500).json({ message: 'Registration failed', error: err.message });
+  }
 };
-// async function createDefaultUser() {
-//   const defaultData = {
-//     rollNumber: '0000',
-//     username: 'Default User',
-//     school: 'Default School'
-//   };
-//   return await User.create(defaultData);
-// }
-// createDefaultUser()
+
+// LOGIN (create if not found)
+exports.loginUser = async (req, res) => {
+  try {
+    const { mobileNo } = req.body;
+
+    const user = await User.findOne({ mobileNo });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      message: 'Login successful',
+      user
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Login failed', error: err.message });
+  }
+};
 
 
-// const data = async () => {
-//   try {
-//     const data = { rollNumber: "0000", username: "Default User", school: "Default School" }
-//     const { rollNumber, username, school } = data;
-//     if (!rollNumber || !username || !school) return res.status(400).json({ message: 'rollNumber, username & school required' });
-//     let user = await User.findOne({ rollNumber });
-//     if (!user) user = await User.create({ rollNumber, username, school });
-//     console.log(user)
-//     const now = new Date();
-//     const active = await Quiz.find({
-//       assignedUsers: { $in: [user._id] },
-//       startTime: { $lte: now.toISOString() },
-//       endTime: { $gte: now.toISOString() }
-//     }).select('title startTime endTime');
-//     console.log(active)
-//     const pastResults = await Result.find({ user: user._id }).populate('quiz', 'title').select('score submittedAt');
-//     console.log(pastResults)
-//     // res.json({ user, activeQuizzes: active, pastResults });
-//   } catch (err) {
-//     console.log(err)
-//   }
-// };
-// setTimeout(() => {
-//   data();
-// }, 3000);
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.find().select('-__v'); // Exclude __v field
+    res.json(users);
+  } catch (err) {
+    next(err);
+  }
+};
 
 
 exports.getAllUsers = async (req, res, next) => {
@@ -109,3 +107,6 @@ exports.getAllQuizesScoredByUserId = async (req, res, next) => {
     next(err);
   }
 };
+
+
+

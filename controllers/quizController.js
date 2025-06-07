@@ -5,8 +5,8 @@ const Result = require('../models/Result');
 
 exports.getActiveQuiz = async (req, res, next) => {
   try {
-    let user = await User.findOne({ rollNumber: req.params.rollNumber });
-    if (!user) user = await User.create({ rollNumber: req.params.rollNumber, username: req.params.rollNumber, school: '' });
+    let user = await User.findOne({ mobileNo: req.params.rollNumber });
+    // if (!user) user = await User.create({ rollNumber: req.params.rollNumber, username: req.params.rollNumber, school: '' });
 
     // Get current time in Asia/Kolkata timezone in 'YYYY-MM-DDTHH:mm' format
     const nowIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
@@ -32,10 +32,10 @@ exports.getActiveQuiz = async (req, res, next) => {
 exports.submitQuiz = async (req, res, next) => {
   try {
     const { quizId } = req.params;
-    const { rollNumber, answers } = req.body;
-    if (!rollNumber || !answers) return res.status(400).json({ message: 'Invalid submission' });
+    const { mobileNo, answers } = req.body;
+    if (!mobileNo || !answers) return res.status(400).json({ message: 'Invalid submission' });
 
-    const user = await User.findOne({ rollNumber });
+    const user = await User.findOne({ mobileNo });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const quiz = await Quiz.findById(quizId);
