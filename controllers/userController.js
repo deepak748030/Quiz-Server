@@ -42,7 +42,7 @@ exports.registerUser = async (req, res) => {
 
     if (!newUser.verified) {
       const orderData = {
-        order_amount: 1.00,
+        order_amount: 200.00,
         order_currency: "INR",
         customer_details: {
           customer_id: newUser._id.toString(),
