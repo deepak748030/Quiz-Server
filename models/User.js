@@ -21,12 +21,14 @@ const userSchema = new mongoose.Schema({
   aadhaarNo: { type: String, required: true, unique: true },
   panCardNo: { type: String },
   dob: { type: String, required: true },
+  verified: { type: Boolean, default: false },
   education: {
     tenth: educationSchema,
     twelfth: educationSchema,
     graduation: educationSchema,
   },
   address: addressSchema,
+
 }, {
   timestamps: true,
 });
