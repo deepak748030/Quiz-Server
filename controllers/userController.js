@@ -18,8 +18,13 @@ exports.registerUser = async (req, res) => {
     const { name, guardianOrParent, mobileNo, aadhaarNo, panCardNo, dob, education, address } = req.body;
     const verified = req.body.verified || false;
 
-    const existingUser = await User.findOne({ mobileNo });
+    const existingUser = await User.findOne({ mobileNo, verified: true });
     if (existingUser) return res.status(400).json({ message: 'User already exists' });
+
+    const exisingUnverifiedUser = await User.findOne({ mobileNo, verified: false });
+    if (exisingUnverifiedUser) {
+      await User.deleteOne({ _id: exisingUnverifiedUser._id });
+    }
 
     const newUser = new User({
       name,
