@@ -2,17 +2,19 @@
 const User = require('../models/User');
 const Quiz = require('../models/Quiz');
 const Result = require('../models/Result');
-const axios = require('axios');
+const Razorpay = require('razorpay')
 const nodecache = require('node-cache');
 const nodeCache = new nodecache({ stdTTL: 600 }); // 600 seconds = 10 minutes
+const dotenv = require('dotenv');
+dotenv.config();
 
 
+const razorpay = new Razorpay({
+  key_id: process.env.key_id,
+  key_secret: process.env.key_secret
+});
 
-// prod
-const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
-const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
-const CASHFREE_BASE_URL = process.env.CASHFREE_BASE_URL;
-
+// Register User & Create Razorpay Order
 exports.registerUser = async (req, res) => {
   try {
     const { name, guardianOrParent, mobileNo, aadhaarNo, panCardNo, dob, education, address } = req.body;
@@ -41,45 +43,22 @@ exports.registerUser = async (req, res) => {
     await newUser.save();
 
     if (!newUser.verified) {
-      const orderData = {
-        order_amount: 200.00,
-        order_currency: "INR",
-        customer_details: {
-          customer_id: newUser._id.toString(),
-          customer_name: newUser.name,
-          customer_phone: newUser.mobileNo
-        }
-      };
+      const order = await razorpay.orders.create({
+        amount: 100, // in paise (₹200)
+        currency: "INR",
+        receipt: `user_reg_${newUser._id}`,
+        payment_capture: 1
+      });
 
-      let response;
-      try {
-        response = await axios.post(
-          `${CASHFREE_BASE_URL}/orders`,
-          orderData,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-version": "2023-08-01",
-              "x-client-id": CASHFREE_APP_ID,
-              "x-client-secret": CASHFREE_SECRET_KEY
-            }
-          }
-        );
-      } catch (err) {
-        return res.status(500).json({
-          message: 'Payment link generation failed, user not registered',
-          error: err.response?.data || err.message
-        });
-      }
+      nodeCache.set(order.id, newUser._id.toString());
 
-      // const orderId = response.data.order_id;
-      // console.log(response.data)
-      // const paymentLink = `${CASHFREE_BASE_URL}/session/${response.data.payment_session_id}`;
-      nodeCache.set(response.data.order_id, newUser._id.toString());
-      console.log(response.data.order_id)
       return res.status(201).json({
-        message: 'newUser registered',
-        user: { id: newUser._id, verified: newUser.verified, data: response.data }
+        message: 'User registered (unverified)',
+        user: {
+          id: newUser._id,
+          verified: newUser.verified,
+          razorpay: order
+        }
       });
     } else {
       return res.status(201).json({ message: 'User registered', user: newUser });
@@ -91,58 +70,19 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-
-
+// Verify Razorpay Payment
 exports.verifyPayment = async (req, res) => {
   try {
-    const { orderId } = req.body;
-    console.log('Verifying orderId:', orderId);
-
-    if (!orderId) {
-      return res.status(400).json({ message: "orderId is required" });
+    const { razorpay_order_id, razorpay_payment_id } = req.body;
+    if (!razorpay_order_id || !razorpay_payment_id) {
+      return res.status(400).json({ message: 'Missing Razorpay order or payment ID' });
     }
 
-    // 1. Check payment status
-    const paymentResponse = await axios.get(
-      `${CASHFREE_BASE_URL}/orders/${orderId}/payments`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-version": "2023-08-01",
-          "x-client-id": CASHFREE_APP_ID,
-          "x-client-secret": CASHFREE_SECRET_KEY
-        }
-      }
-    );
-
-    const payments = paymentResponse.data;
-    console.log(paymentResponse.data)
-    if (!payments) {
-      return res.status(404).json({ message: 'No payments found for this order' });
-    }
-
-    // Debugging all payment statuses
-    console.log('Payments received:', payments.map(p => ({
-      id: p.cf_payment_id,
-      status: p.payment_status
-    })));
-
-    // 2. Find the successful payment
-    const successfulPayment = payments.find(
-      payment => payment.payment_status?.toUpperCase() === 'SUCCESS'
-    );
-    console.log("----", successfulPayment)
-    if (!successfulPayment) {
-      return res.status(400).json({ message: 'Payment not successful yet' });
-    }
-
-    // 3. Get userId from cache
-    const userId = nodeCache.get(orderId);
+    const userId = nodeCache.get(razorpay_order_id);
     if (!userId) {
-      return res.status(404).json({ message: 'User mapping not found in cache (expired or missing)' });
+      return res.status(404).json({ message: 'User mapping not found for this order ID' });
     }
 
-    // 4. Update user as verified
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { verified: true },
@@ -154,17 +94,13 @@ exports.verifyPayment = async (req, res) => {
     }
 
     return res.status(200).json({
-      message: 'Payment verified successfully.',
-      status: "success",
-      payments: payments
+      message: 'Payment verified successfully',
+      status: 'success',
+      user: updatedUser
     });
-
   } catch (err) {
-    console.error('Error verifying payment:', err.response?.data || err.message);
-    return res.status(500).json({
-      message: 'Error verifying payment',
-      error: err.response?.data || err.message
-    });
+    console.error('Error verifying Razorpay payment:', err);
+    return res.status(500).json({ message: 'Error verifying payment', error: err.message });
   }
 };
 
