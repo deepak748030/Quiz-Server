@@ -44,7 +44,7 @@ exports.registerUser = async (req, res) => {
 
     if (!newUser.verified) {
       const order = await razorpay.orders.create({
-        amount: 100, // in paise (₹200)
+        amount: 20000, // in paise (₹200)
         currency: "INR",
         receipt: `user_reg_${newUser._id}`,
         payment_capture: 1
