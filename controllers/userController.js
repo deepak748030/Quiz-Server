@@ -19,7 +19,7 @@ exports.registerUser = async (req, res) => {
   try {
     const { name, guardianOrParent, mobileNo, aadhaarNo, panCardNo, dob, education, address } = req.body;
     const verified = req.body.verified || false;
-
+    console.log(verified)
     const existingUser = await User.findOne({ mobileNo, verified: true });
     if (existingUser) return res.status(400).json({ message: 'User already exists' });
 
@@ -66,6 +66,16 @@ exports.registerUser = async (req, res) => {
 
   } catch (err) {
     console.error('Registration failed:', err);
+    if (err.code === 11000) {
+      const duplicatedField = Object.keys(err.keyPattern)[0];
+      const message = duplicatedField === 'mobileNo'
+        ? 'Mobile number already exists'
+        : duplicatedField === 'aadhaarNo'
+          ? 'Aadhaar number already exists'
+          : 'Duplicate field error';
+      return res.status(400).json({ message });
+    }
+
     return res.status(500).json({ message: 'Registration failed', error: err.message });
   }
 };
